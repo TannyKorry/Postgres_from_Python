@@ -7,10 +7,18 @@ with conn.cursor() as cur:
             id SERIAL PRIMARY KEY,
             name VARCHAR(30) NOT NULL,
             surname VARCHAR(80) NOT NULL,
-            email VARCHAR(40) NOT NULL,
+            email VARCHAR(40) UNIQUE NOT NULL,
             phone_number INTEGER UNIQUE
             );
             """)
+    cur.execute("""
+            CREATE TABLE IF NOT EXISTS phone_number (
+                id SERIAL PRIMARY KEY,
+                number INTEGER NOT NULL,
+                description VARCHAR(40) NOT NULL,
+                personal_data_id INTEGER NOT NULL REFERENCES personal_data(id)
+                );
+                """)
     conn.commit()
 conn.close()
 
