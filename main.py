@@ -34,6 +34,14 @@ with closing(psycopg2.connect(database='customers_db', user=user, password=pas))
                     """)
             return cur.fetchall()
 
+        def _get_data(cursor, personal_id):
+            """Функция выдает список данных по клиентам и номерам телефонов"""
+            cursor.execute("""
+                    SELECT * FROM personal_data
+                    WHERE personal_id=%s;
+                    """, (personal_id,))
+            return cur.fetchall()
+
 
         def _get_cust_data_id(cursor, personal_id: int):
             """Функция выдает список данных клиента по id"""
@@ -88,9 +96,9 @@ with closing(psycopg2.connect(database='customers_db', user=user, password=pas))
         # 2. Добавление нового клиента
         def add_new_cust(name, surname, email):
             cur.execute("""
-                    INSERT INTO personal_data(name, surname, email) VALUES (%s, %s, %s);
+                    INSERT INTO personal_data(name, surname, email) VALUES (%s, %s, %s) RETURNING personal_id;
                     """, (name, surname, email))
-            conn.commit()
+            print(f'Новый клиент внесен в базу данных c идентификатором: {cur.fetchone()[0]}')
 
 
         # 3. Добавление номера телефона для существующего клиента
@@ -102,29 +110,32 @@ with closing(psycopg2.connect(database='customers_db', user=user, password=pas))
 
 
         # 4. Функция, позволяющая изменить данные о клиенте
-        def change_data(personal_id, name=None, surname=None, email=None, number=None): # МЕНЯЕТ ВСЕ КРОМЕ ТЕЛЕФОНА
-            custom = _get_cust_data_id(cur, personal_id)[0]
-            if name is None:
-                name = _get_cust_data_id(cur, personal_id)[0][0]
-            if surname is None:
-                surname = _get_cust_data_id(cur, personal_id)[0][1]
-            if email is None:
-                email = _get_cust_data_id(cur, personal_id)[0][2]
-            new_data = (name, surname, email, personal_id)
-            if new_data != custom:
-                print(f'\nПервоначальные данные по клиенту:\n{_get_cust_data_id(cur, personal_id)}')
-                cur.execute("""
-                    UPDATE personal_data
-                    SET name=%s, surname=%s, email=%s WHERE personal_id=%s;
-                    """, new_data)
-                print(f'\nИзменения внесены в базу данных.\nНовая информация по клиенту:\n{_get_cust_data_id(cur, personal_id)}')
+        def change_data(personal_id, name=None, surname=None, email=None, number=None):
+            custom = _get_cust_data_id(cur, personal_id)
+            if custom == []:
+                print(f'Клиент с идентификатором {personal_id} не найден')
             else:
-                print(f'Телефон(ы) клиента:\n{_get_num_id(cur, personal_id)}')
-                cur.execute("""
-                    UPDATE phone_number SET number=%s WHERE personal_id=%s;
-                    """, (number, personal_id))
-                print(_get_num_id(cur, personal_id))
-
+                if name is None:
+                    name = _get_cust_data_id(cur, personal_id)[0][0]
+                if surname is None:
+                    surname = _get_cust_data_id(cur, personal_id)[0][1]
+                if email is None:
+                    email = _get_cust_data_id(cur, personal_id)[0][2]
+                new_data = (name, surname, email, personal_id)
+                if new_data != custom[0]:
+                    print(f'\nПервоначальные данные по клиенту:\n{_get_cust_data_id(cur, personal_id)}')
+                    cur.execute("""
+                        UPDATE personal_data
+                        SET name=%s, surname=%s, email=%s WHERE personal_id=%s;
+                        """, new_data)
+                    print(f'\nИзменения внесены в базу данных.\nНовая информация по клиенту:\n{_get_cust_data_id(cur, personal_id)}')
+                else:
+                    print(f'Телефон(ы) клиента:\n{_get_num_id(cur, personal_id)}\n')
+                    id_num = input('Введите id номера, который нужно изменить: ')
+                    cur.execute("""
+                        UPDATE phone_number SET number=%s WHERE id=%s;
+                        """, (number, id_num))
+                    print(f'\nИзменения внесены в базу данных.\nНовый список телефонов:\n{_get_num_id(cur, personal_id)}')
             conn.commit()
 
 
@@ -159,14 +170,45 @@ with closing(psycopg2.connect(database='customers_db', user=user, password=pas))
 
 
         # 7. Функция, позволяющая найти клиента по его данным (имени, фамилии, email или телефону)
+        def get_cust(cursor, name=None, surname=None, email=None, number=None):
+            cursor.execute("""
+                        SELECT * FROM personal_data LEFT JOIN phone_number USING (personal_id) 
+                        WHERE surname=%s;
+                        """, (surname,))
+            return cur.fetchall()
 
         if __name__ == '__main__':
             # _drop_tab()
             # create_tabs()
-            # add_new_cust('Svetlana', 'Kozyreva', 'sveta@mail.ru')
+            # add_new_cust('Petr', 'Kicha', 'kic-p@bk.ru')
             # add_cust_ph('Makarov', 84992586023, 'рабочий')
-            # change_data(1, number='84955552288')
-            # print(_get_cust_id_num(cur, '84955552233'))
+            print(get_cust(cur, 'Pegov'))
+            # change_data(7, name='Denis')
+            # print(_get_cust_data_id(cur,7))
             # del_ph_cust(1)
-            del_cust(1)
+            # del_cust(1)
 #[(2, 'Alexandr', 'Pegov', 'pegov@gmail.com', 1, '84955552233', 'рабочий'), (2, 'Alexandr', 'Pegov', 'pegov@gmail.com', 2, '89161566861', 'мобильный'), (1, 'Denis', 'Makarov', 'makarov_d@gmail.com', 3, '89257617896', 'мобильный'), (1, 'Denis', 'Makarov', 'makarov_d@gmail.com', 4, '84992586023', 'рабочий'), (3, 'Svetlana', 'Kozyreva', 'sveta@mail.ru', None, None, None)]
+    # def quary_command():
+    #     command = True
+    #     while command:
+    #         print()
+    #         command = input('Введите команду: ')
+    #         if command.lower() == 'p':
+    #             output_name(documents)
+    #         elif command.lower() == 's':
+    #             output_place(directories)
+    #         elif command.lower() == 'l':
+    #             output_list_docs(documents)
+    #         elif command.lower() == 'a':
+    #             add_docs(documents)
+    #         elif command.lower() == 'd':
+    #             delete_docs(documents)
+    #         elif command.lower() == 'm':
+    #             move_docs(documents)
+    #         elif command.lower() == 'as':
+    #             add_chelf(directories)
+    #         else:
+    #             print('Такой команды нет')
+    #
+    #
+    # quary_command()
