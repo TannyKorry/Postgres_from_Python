@@ -85,7 +85,7 @@ with closing(psycopg2.connect(database='customers_db', user=user, password=pas))
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS phone_number(
                     id SERIAL PRIMARY KEY,
-                    number VARCHAR(15) UNIQUE NOT NULL,
+                    number VARCHAR(25) UNIQUE NOT NULL,
                     description VARCHAR(40),
                     personal_id INTEGER REFERENCES personal_data(personal_id)
                     );
@@ -96,9 +96,10 @@ with closing(psycopg2.connect(database='customers_db', user=user, password=pas))
         # 2. Добавление нового клиента
         def add_new_cust(name, surname, email):
             cur.execute("""
-                    INSERT INTO personal_data(name, surname, email) VALUES (%s, %s, %s) RETURNING personal_id;
-                    """, (name, surname, email))
-            print(f'Новый клиент внесен в базу данных c идентификатором: {cur.fetchone()[0]}')
+                INSERT INTO personal_data(name, surname, email) VALUES (%s, %s, %s) RETURNING personal_id;
+                """, (name, surname, email))
+            conn.commit()
+            print(f'Новый клиент внесен в базу данных с идентификатором {cur.fetchone()[0]}')
 
 
         # 3. Добавление номера телефона для существующего клиента
@@ -172,7 +173,7 @@ with closing(psycopg2.connect(database='customers_db', user=user, password=pas))
         # 7. Функция, позволяющая найти клиента по его данным (имени, фамилии, email или телефону)
         def get_cust(cursor, keyword):
             cursor.execute("""
-                SELECT * FROM personal_data LEFT JOIN phone_number USING (personal_id)
+                SELECT * FROM personal_data
                 WHERE name=%s;
                 """, (keyword,))
             i = cur.fetchall()
@@ -181,7 +182,7 @@ with closing(psycopg2.connect(database='customers_db', user=user, password=pas))
             else:
                 surname = keyword
                 cursor.execute("""
-                    SELECT * FROM personal_data LEFT JOIN phone_number USING (personal_id) 
+                    SELECT * FROM personal_data 
                     WHERE surname=%s;
                     """, (surname,))
                 i = cur.fetchall()
@@ -190,7 +191,7 @@ with closing(psycopg2.connect(database='customers_db', user=user, password=pas))
                 else:
                     email = keyword
                     cursor.execute("""
-                        SELECT * FROM personal_data LEFT JOIN phone_number USING (personal_id) 
+                        SELECT * FROM personal_data 
                         WHERE email=%s;
                         """, (email,))
                     i = cur.fetchall()
@@ -209,40 +210,54 @@ with closing(psycopg2.connect(database='customers_db', user=user, password=pas))
                             print('Клиент не найден')
 
 
+        def quary_command():
+            print(f'\nСписок команд:\n\nСоздать структуру БД (таблицы) - 1;\n'
+                  f'Добавить нового клиента - 2;\n'
+                  f'Добавить телефон для существующего клиента - 3;\n'
+                  f'Изменить данные о клиенте - 4;\n'
+                  f'Удалить телефон существующего клиента - 5;\n'
+                  f'Удалить существующего клиента - 6;\n'
+                  f'Найти клиента по его данным (имени, фамилии, email-у или телефону) - 7')
+            command = True
+            while command:
+                command = input('Введите команду: ')
+                if command == '1':
+                    create_tabs()
+                elif command == '2':
+                    name = str(input('Введите имя: '))
+                    surname = str(input('Введите фамилию: '))
+                    email = str(input('Введите email: '))
+                    add_new_cust(name, surname, email)
+                elif command == '3':
+                    surname = str(input('Введите фамилию: '))
+                    number = str(input('Введите номер телефона: '))
+                    description = str(input('Введите описание: '))
+                    add_cust_ph(surname, number, description)
+                elif command == '4':
+                    id = input('Введите идентификатор клиента: ')
+                    name = input('Изменить имя: ')
+                    surname = str(input('Изменить фамилию: '))
+                    email = str(input('Изменить email: '))
+                    change_data(id, name=name, surname=surname, email=email)
+                elif command == '5':
+                    id = input('Введите идентификатор клиента: ')
+                    del_ph_cust(id)
+                elif command == '6':
+                    del_cust(id)
+                elif command == '7':
+                    kw = str(input('Введите идентификатор клиента: '))
+                    get_cust(cur, kw)
+                else:
+                    print('Такой команды нет')
 
-        
+
         if __name__ == '__main__':
             # _drop_tab()
-            # create_tabs()
-            # add_new_cust('Petr', 'Kicha', 'kic-p@bk.ru')
-            # add_cust_ph('Makarov', 84992586023, 'рабочий')
-            get_cust(cur, '84955552231')
-            # change_data(7, name='Denis')
-            # print(_get_cust_data_id(cur,7))
-            # del_ph_cust(1)
-            # del_cust(1)
-#[(2, 'Alexandr', 'Pegov', 'pegov@gmail.com', 1, '84955552233', 'рабочий'), (2, 'Alexandr', 'Pegov', 'pegov@gmail.com', 2, '89161566861', 'мобильный'), (1, 'Denis', 'Makarov', 'makarov_d@gmail.com', 3, '89257617896', 'мобильный'), (1, 'Denis', 'Makarov', 'makarov_d@gmail.com', 4, '84992586023', 'рабочий'), (3, 'Svetlana', 'Kozyreva', 'sveta@mail.ru', None, None, None)]
-    # def quary_command():
-    #     command = True
-    #     while command:
-    #         print()
-    #         command = input('Введите команду: ')
-    #         if command.lower() == 'p':
-    #             output_name(documents)
-    #         elif command.lower() == 's':
-    #             output_place(directories)
-    #         elif command.lower() == 'l':
-    #             output_list_docs(documents)
-    #         elif command.lower() == 'a':
-    #             add_docs(documents)
-    #         elif command.lower() == 'd':
-    #             delete_docs(documents)
-    #         elif command.lower() == 'm':
-    #             move_docs(documents)
-    #         elif command.lower() == 'as':
-    #             add_chelf(directories)
-    #         else:
-    #             print('Такой команды нет')
-    #
-    #
-    # quary_command()
+
+#[(2, 'Alexandr', 'Pegov', 'pegov@gmail.com', 1, '84955552233', 'рабочий'),
+# (2, 'Alexandr', 'Pegov', 'pegov@gmail.com', 2, '89161566861', 'мобильный'),
+# (1, 'Denis', 'Makarov', 'makarov_d@gmail.com', 3, '89257617896', 'мобильный'),
+# (1, 'Denis', 'Makarov', 'makarov_d@gmail.com', 4, '84992586023', 'рабочий'),
+# (3, 'Svetlana', 'Kozyreva', 'sveta@mail.ru', None, None, None)]
+
+            quary_command()
