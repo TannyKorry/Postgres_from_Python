@@ -170,19 +170,53 @@ with closing(psycopg2.connect(database='customers_db', user=user, password=pas))
 
 
         # 7. Функция, позволяющая найти клиента по его данным (имени, фамилии, email или телефону)
-        def get_cust(cursor, name=None, surname=None, email=None, number=None):
+        def get_cust(cursor, keyword):
             cursor.execute("""
+                SELECT * FROM personal_data LEFT JOIN phone_number USING (personal_id)
+                WHERE name=%s;
+                """, (keyword,))
+            i = cur.fetchall()
+            if i != []:
+                print(i)
+            else:
+                surname = keyword
+                cursor.execute("""
+                    SELECT * FROM personal_data LEFT JOIN phone_number USING (personal_id) 
+                    WHERE surname=%s;
+                    """, (surname,))
+                i = cur.fetchall()
+                if i != []:
+                    print(i)
+                else:
+                    email = keyword
+                    cursor.execute("""
                         SELECT * FROM personal_data LEFT JOIN phone_number USING (personal_id) 
-                        WHERE surname=%s;
-                        """, (surname,))
-            return cur.fetchall()
+                        WHERE email=%s;
+                        """, (email,))
+                    i = cur.fetchall()
+                    if i != []:
+                        print(i)
+                    else:
+                        number = keyword
+                        cursor.execute("""
+                            SELECT * FROM personal_data LEFT JOIN phone_number USING (personal_id) 
+                            WHERE number=%s;
+                            """, (number,))
+                        i = cur.fetchall()
+                        if i != []:
+                            print(i)
+                        else:
+                            print('Клиент не найден')
 
+
+
+        
         if __name__ == '__main__':
             # _drop_tab()
             # create_tabs()
             # add_new_cust('Petr', 'Kicha', 'kic-p@bk.ru')
             # add_cust_ph('Makarov', 84992586023, 'рабочий')
-            print(get_cust(cur, 'Pegov'))
+            get_cust(cur, '84955552231')
             # change_data(7, name='Denis')
             # print(_get_cust_data_id(cur,7))
             # del_ph_cust(1)
