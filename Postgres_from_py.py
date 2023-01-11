@@ -204,10 +204,20 @@ def quary_command():
             add_cust_ph(surname, number, description)
         elif command == '4':
             id = input('Введите идентификатор клиента: ')
-            name = input('Изменить имя: ')
-            surname = str(input('Изменить фамилию: '))
-            email = str(input('Изменить email: '))
-            change_data(id, name=name, surname=surname, email=email)
+            if _get_cust_data_id(cur, id) == []:
+                print(f'Клиент с идентификатором {id} не найден')
+                continue
+            print('Далее введите новые данные или оставьте строку пустой')
+            new_name = str(input('Изменить имя? '))
+            if new_name == str():
+                new_name = _get_cust_data_id(cur, id)[0][0]
+            new_surname = str(input('Изменить фамилию? '))
+            if new_surname == str():
+                new_surname = _get_cust_data_id(cur, id)[0][1]
+            new_email = str(input('Изменить email? '))
+            if new_email == str():
+                new_email = _get_cust_data_id(cur, id)[0][2]
+            change_data(id, name=new_name, surname=new_surname, email=new_email)
         elif command == '5':
             id = input('Введите идентификатор клиента: ')
             del_ph_cust(id)
@@ -224,6 +234,5 @@ if __name__ == '__main__':
 
     with closing(psycopg2.connect(database='customers_db', user=user, password=pas)) as conn:
         with conn.cursor() as cur:
-            # _drop_tab()
 
             quary_command()
